@@ -1,0 +1,58 @@
+{% extends "base.html" %}{% set active='robustness' %}
+{% block title %}Robustness test{% endblock %}
+{% block content %}
+
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+<div class="card">
+  <p class="eyebrow">Objective iv — Robustness</p>
+  <h2>Recovery under compression, cropping &amp; resizing</h2>
+  <p class="sub">A message is embedded in your cover image, then the stego image is
+     attacked with each transformation below. We report how much of the message
+     still survives — the message recovery rate.</p>
+  <form method="post" enctype="multipart/form-data">
+    <div class="grid2">
+      <div>
+        <label>Cover image</label>
+        <input type="file" name="cover" accept="image/*" required>
+      </div>
+      <div>
+        <label>Secret message</label>
+        <input type="text" name="message" placeholder="Robustness recovery test 2026">
+      </div>
+    </div>
+    <button class="btn" type="submit">Run robustness suite</button>
+  </form>
+</div>
+
+{% if result %}
+<div class="card">
+  <p class="eyebrow">Result</p>
+  <h2>Recovery rates — {{ result.payload_bytes }} byte payload</h2>
+  <p class="sub">Message: <code>{{ result.message }}</code></p>
+  <div style="margin-top:12px">
+    {% for r in result.results %}
+    <div style="margin-bottom:16px">
+      <div style="display:flex; justify-content:space-between; align-items:baseline; margin-bottom:6px">
+        <span><strong>{{ r.attack }}</strong>
+          <span class="note">— {{ r.desc }}</span></span>
+        <span class="mono" style="font-weight:700; color:{{ '#34d399' if r.recovery >= 99 else ('#fbbf24' if r.recovery >= 50 else '#f87171') }}">{{ r.recovery }}%</span>
+      </div>
+      <div style="height:10px; border-radius:99px; background:rgba(255,255,255,.06); overflow:hidden">
+        <div style="height:100%; width:{{ r.recovery }}%; border-radius:99px;
+             background:linear-gradient(90deg,
+               {{ '#34d399,#22d3ee' if r.recovery >= 99 else ('#fbbf24,#f59e0b' if r.recovery >= 50 else '#f87171,#ef4444') }});"></div>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  <p class="note" style="margin-top:18px">Like all high-capacity spatial-domain
+     steganography, the method is <strong>lossless-perfect but fragile to lossy edits</strong>:
+     a PNG stego image recovers 100%, while JPEG re-compression and rescaling alter the
+     carrier pixels and destroy the hidden bits. This is the expected trade-off — for
+     robustness against compression, the frequency-domain DCT method on the
+     <a href="/compare">Compare</a> page is more resilient. Practical guidance:
+     <strong>always store and transmit the stego image as PNG.</strong></p>
+</div>
+{% endif %}
+{% endblock %}

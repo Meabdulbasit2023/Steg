@@ -1,0 +1,87 @@
+{% extends "base.html" %}{% set active='about' %}
+{% block title %}How it works{% endblock %}
+{% block content %}
+
+<div class="card">
+  <p class="eyebrow">Algorithm 1 — Design</p>
+  <h2>The hiding pipeline</h2>
+  <div class="step-flow">
+    <span class="step">Secret</span><span class="arr">→</span>
+    <span class="step">Binary</span><span class="arr">→</span>
+    <span class="step">2's complement</span><span class="arr">→</span>
+    <span class="step">XOR</span><span class="arr">→</span>
+    <span class="step">ML region selection</span><span class="arr">→</span>
+    <span class="step">Embed</span><span class="arr">→</span>
+    <span class="step">Stego image</span>
+  </div>
+  <ol>
+    <li><strong>Binary conversion</strong> — the secret (image or text) becomes a
+        stream of bytes, then bits.</li>
+    <li><strong>Two's complement</strong> — every byte is transformed:
+        <code>S₂comp = NOT(S) + 1</code>. The transform is its own inverse, so
+        applying it again during decoding restores the original bytes.</li>
+    <li><strong>XOR</strong> — each bit is XORed with the most-significant bit of the
+        pixel it will occupy, scrambling the data against the image itself.
+        Without reversing both steps, an extracted bit-stream is meaningless.</li>
+    <li><strong>ML region selection</strong> — a Random Forest model trained on the
+        project dataset classifies every 8×8 block by texture (variance + edge
+        strength) as busy, medium or smooth. Bits go into the busiest blocks
+        first, where changes are imperceptible.</li>
+    <li><strong>Embedding</strong> — the transformed bits replace the lowest 1–2 bits
+        of the chosen pixels. A small header (marker, payload type,
+        bits-per-channel, length) is stored at a fixed location so the decoder
+        can bootstrap itself.</li>
+  </ol>
+</div>
+
+<div class="card">
+  <p class="eyebrow grad-amber">Worked example</p>
+  <h2>Binary → two's complement, by hand</h2>
+  <p class="sub">Hiding the letter <code>A</code> (ASCII 65):</p>
+  <div class="tablewrap calc">
+    <table>
+      <tr><th>step</th><th>operation</th><th>result</th></tr>
+      <tr class="mono"><td>1</td><td>'A' as decimal</td><td>65</td></tr>
+      <tr class="mono"><td>2</td><td>convert to binary</td>
+          <td class="bits"><span class="b0">0</span><span class="b1">1</span><span class="b0">0</span><span class="b0">0</span><span class="b0">0</span><span class="b0">0</span><span class="b0">0</span><span class="b1">1</span></td></tr>
+      <tr class="mono"><td>3</td><td>1's complement — flip every bit (NOT)</td>
+          <td class="bits"><span class="b1">1</span><span class="b0">0</span><span class="b1">1</span><span class="b1">1</span><span class="b1">1</span><span class="b1">1</span><span class="b1">1</span><span class="b0">0</span></td></tr>
+      <tr class="mono"><td>4</td><td>add 1 → <b>2's complement</b></td>
+          <td class="bits"><span class="b1">1</span><span class="b0">0</span><span class="b1">1</span><span class="b1">1</span><span class="b1">1</span><span class="b1">1</span><span class="b1">1</span><span class="b1">1</span>&nbsp;(= 191)</td></tr>
+      <tr class="mono"><td>5</td><td>each bit ⊕ pixel MSB, written to pixel's low bit</td><td>embedded</td></tr>
+    </table>
+  </div>
+  <p class="note" style="margin-top:12px">Decoding reverses it: read bits → ⊕ MSB again
+     → 10111111 → NOT+1 → 01000001 = 65 = <code>A</code>. The encode page shows this
+     exact table computed live for your own secret.</p>
+</div>
+
+<div class="card">
+  <p class="eyebrow grad-teal">Machine learning</p>
+  <h2>The two ML models</h2>
+  <h3>1 · Random Forest region model</h3>
+  <p class="sub">Trained on 8×8-block texture features (82,396 blocks from 198
+     passport photos + 10 varied benchmarks) to classify blocks as busy, medium
+     or smooth. At embed time it ranks each block of the specific cover image;
+     the ranking is computed from bit-masked pixels so encoder and decoder
+     always derive identical regions — no key exchange needed.</p>
+  <h3>2 · SVM steganalysis classifier</h3>
+  <p class="sub">A trained "attacker" (support vector machine, RBF kernel) that tries
+     to detect hidden data from LSB-plane statistics. Detectability near 50% means
+     stego images are statistically indistinguishable from clean ones. The
+     evaluation compares our method against traditional sequential LSB embedding.</p>
+</div>
+
+<div class="card">
+  <p class="eyebrow grad-green">Objective iii</p>
+  <h2>Evaluation metrics</h2>
+  <ul>
+    <li><strong>MSE</strong> — mean of (original − stego)² over all pixels.</li>
+    <li><strong>PSNR</strong> — <code>10·log₁₀(255² / MSE)</code>, target &gt; 40 dB.</li>
+    <li><strong>Extraction accuracy</strong> — % of payload bytes recovered exactly
+        (100% by design on lossless PNG).</li>
+    <li><strong>Detectability</strong> — accuracy of the trained steganalysis attacker
+        (closer to 50% is better).</li>
+  </ul>
+</div>
+{% endblock %}

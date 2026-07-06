@@ -1,0 +1,173 @@
+{% extends "base.html" %}{% set active='encode' %}
+{% block title %}Hide a secret{% endblock %}
+
+{% block hero %}
+<div class="hero">
+  <canvas id="binrain"></canvas>
+  <div class="hero-inner">
+    <h1>Hide a secret image inside another image</h1>
+    <p>Enhanced image steganography: the secret is converted to binary, transformed
+       with two's complement, XORed against the cover's pixels, and embedded into
+       regions chosen by a machine-learning texture model.</p>
+    <div class="badges">
+      <span class="badge">Binary → 2's complement → XOR</span>
+      <span class="badge">Random Forest region selection</span>
+      <span class="badge">SVM steganalysis</span>
+      <span class="badge">PSNR &gt; 40 dB</span>
+      <span class="badge">100% bit-perfect recovery</span>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+<div class="card">
+  <p class="eyebrow">Step 1 — Encode</p>
+  <h2>Embed a secret</h2>
+  <p class="sub">Upload a cover image and choose what to hide. The output is a
+     lossless PNG stego image, visually identical to the cover.</p>
+
+  <form method="post" enctype="multipart/form-data" id="f">
+    <div class="grid2">
+      <div>
+        <label>Cover image <span class="note">(PNG recommended)</span></label>
+        <input type="file" name="cover" accept="image/*" required id="cover">
+        <div class="note" id="capinfo" style="margin-top:6px"></div>
+
+        <label>Bits per channel</label>
+        <select name="bpc">
+          <option value="1">1 — highest quality (PSNR ≈ 51+ dB)</option>
+          <option value="2">2 — double capacity (PSNR ≈ 44+ dB)</option>
+        </select>
+      </div>
+      <div>
+        <label>What do you want to hide?</label>
+        <select name="mode" id="mode">
+          <option value="image">A secret image</option>
+          <option value="text">A text message</option>
+        </select>
+
+        <div id="imgfield">
+          <label>Secret image</label>
+          <input type="file" name="secret" accept="image/*">
+          <p class="note">Automatically downscaled if it exceeds the cover's capacity.</p>
+        </div>
+
+        <div id="txtfield" style="display:none">
+          <label>Secret message</label>
+          <textarea name="message" placeholder="Type the secret message…"></textarea>
+        </div>
+      </div>
+    </div>
+    <button class="btn" type="submit">Embed secret</button>
+  </form>
+</div>
+
+{% if result %}
+<div class="card">
+  <p class="eyebrow">Result</p>
+  <h2>Stego image created <span class="pill">success</span></h2>
+  <div class="metrics">
+    <div class="metric"><div class="v">{{ result.psnr }} dB</div><div class="k">PSNR</div></div>
+    <div class="metric"><div class="v">{{ result.mse }}</div><div class="k">MSE</div></div>
+    <div class="metric"><div class="v">{{ result.payload_bytes }}</div><div class="k">payload bytes</div></div>
+    <div class="metric"><div class="v">{{ result.capacity_bytes }}</div><div class="k">capacity bytes</div></div>
+    {% if result.stego_prob %}
+    <div class="metric"><div class="v">{{ result.stego_prob }}%</div>
+      <div class="k">steganalysis suspicion</div></div>
+    {% endif %}
+  </div>
+  <div class="imgrow">
+    <figure><img src="{{ result.cover_url }}"><figcaption>Original cover</figcaption></figure>
+    <figure><img src="{{ result.stego_url }}"><figcaption>Stego image — secret inside</figcaption></figure>
+    <figure><img src="{{ result.diff_url }}"><figcaption>Difference map (amplified ×40)</figcaption></figure>
+  </div>
+  <p class="note" style="margin-top:10px">The cover and stego images look identical to the
+     eye. The difference map amplifies the change ×40 — only
+     <strong>{{ result.changed_pct }}%</strong> of pixels moved, by at most
+     <strong>{{ result.max_delta }}</strong> level(s).</p>
+  <a href="{{ result.stego_url }}" download><button class="btn" type="button" style="margin-top:16px">Download stego PNG</button></a>
+  <p class="note" style="margin-top:10px">Keep it as PNG — re-saving as JPEG destroys the hidden bits.</p>
+</div>
+
+{% if trace and trace.bytes %}
+<div class="card">
+  <p class="eyebrow">Inside the algorithm</p>
+  <h2>The binary → two's complement calculation</h2>
+  <p class="sub">This is the real arithmetic applied to your secret — shown for the
+     first {{ trace.bytes|length }} of {{ trace.total }} bytes.</p>
+
+  <div class="step-flow">
+    <span class="step">Secret byte</span><span class="arr">→</span>
+    <span class="step">Binary</span><span class="arr">→</span>
+    <span class="step">1's complement (NOT)</span><span class="arr">→</span>
+    <span class="step">+ 1</span><span class="arr">→</span>
+    <span class="step">2's complement</span><span class="arr">→</span>
+    <span class="step">XOR with pixel MSB</span><span class="arr">→</span>
+    <span class="step">Embedded</span>
+  </div>
+
+  <div class="tablewrap calc">
+    <table>
+      <tr><th>#</th>{% if trace.bytes[0].char %}<th>char</th>{% endif %}<th>decimal</th>
+          <th>binary (S)</th><th>NOT S</th><th>NOT S + 1 = S₂comp</th><th>decimal</th></tr>
+      {% for r in trace.bytes %}
+      <tr class="mono">
+        <td>{{ r.i }}</td>
+        {% if trace.bytes[0].char %}<td>{{ r.char }}</td>{% endif %}
+        <td>{{ r.dec }}</td>
+        <td class="bits">{% for b in r.bin %}<span class="b{{ b }}">{{ b }}</span>{% endfor %}</td>
+        <td class="bits">{% for b in r.inv %}<span class="b{{ b }}">{{ b }}</span>{% endfor %}</td>
+        <td class="bits">{% for b in r.twos %}<span class="b{{ b }}">{{ b }}</span>{% endfor %}</td>
+        <td>{{ r.twos_dec }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+
+  <h3>Embedding the first byte, bit by bit</h3>
+  <p class="note">Each 2's-complement bit is XORed with the most-significant bit (MSB)
+     of the ML-chosen pixel it will live in, then written into that pixel's lowest bit.
+     The MSB never changes, so the decoder can reverse the XOR exactly.</p>
+  <div class="tablewrap" style="margin-top:10px">
+    <table>
+      <tr><th>bit #</th><th>S₂comp bit</th><th>pixel slot</th><th>pixel before</th>
+          <th>MSB</th><th>bit ⊕ MSB</th><th>pixel after</th></tr>
+      {% for r in trace.bits %}
+      <tr class="mono">
+        <td>{{ r.k }}</td><td>{{ r.bit }}</td><td>{{ r.slot }}</td>
+        <td>{{ r.before }} = {{ r.before_bin }}</td>
+        <td>{{ r.msb }}</td>
+        <td><b>{{ r.bit }} ⊕ {{ r.msb }} = {{ r.xored }}</b></td>
+        <td>{{ r.after }} = {{ r.after_bin }}</td>
+      </tr>
+      {% endfor %}
+    </table>
+  </div>
+  <p class="note" style="margin-top:10px">Decoding runs this in reverse: read the low bit,
+     XOR with the same MSB, collect 8 bits, then apply 2's complement again
+     (it is its own inverse: NOT(S₂comp) + 1 = S) to recover each original byte.</p>
+</div>
+{% endif %}
+{% endif %}
+
+<script>
+const mode = document.getElementById('mode');
+mode.addEventListener('change', () => {
+  document.getElementById('imgfield').style.display = mode.value === 'image' ? '' : 'none';
+  document.getElementById('txtfield').style.display = mode.value === 'text' ? '' : 'none';
+});
+document.getElementById('cover').addEventListener('change', async (e) => {
+  const fd = new FormData();
+  fd.append('cover', e.target.files[0]);
+  const r = await fetch('/capacity', {method: 'POST', body: fd});
+  const j = await r.json();
+  document.getElementById('capinfo').textContent = j.ok
+    ? `${j.w}×${j.h} px — capacity: ${j.capacity_1.toLocaleString()} bytes at 1 bit/channel, ${j.capacity_2.toLocaleString()} at 2`
+    : j.error;
+});
+</script>
+{% endblock %}

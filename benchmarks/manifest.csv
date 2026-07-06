@@ -1,0 +1,11 @@
+file,type,size
+person_astronaut.png,person,512x512
+animal_cat.png,animal,451x300
+scene_coffee.png,scene,600x400
+landscape_moon.png,landscape,512x512
+texture_brick.png,texture,512x512
+texture_grass.png,texture,512x512
+texture_gravel.png,texture,512x512
+object_camera.png,object,512x512
+object_coins.png,object,384x303
+scene_rocket.png,scene,640x427

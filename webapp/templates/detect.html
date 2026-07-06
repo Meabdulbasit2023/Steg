@@ -1,0 +1,76 @@
+{% extends "base.html" %}{% set active='detect' %}
+{% block title %}Detect hidden data{% endblock %}
+{% block content %}
+
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+<div class="card">
+  <p class="eyebrow grad-pink">Steganalysis — falsified-image detector</p>
+  <h2>Is this image hiding something?</h2>
+  <p class="sub">Upload any image. The trained SVM steganalysis model inspects its
+     LSB-plane statistics (led by the Pairs-of-Values chi-square test) and reports
+     whether the image is clean or has been <strong>falsified</strong> with hidden data.</p>
+  <form method="post" enctype="multipart/form-data">
+    <label>Image to inspect</label>
+    <input type="file" name="image" accept="image/*" required>
+    <button class="btn" type="submit">Analyze image</button>
+  </form>
+  {% if summary and summary.steganalysis %}
+  <p class="note" style="margin-top:14px">Detector accuracy on the project dataset:
+     <strong>{{ '%.0f' % (summary.steganalysis.detection_accuracy*100) }}%</strong>
+     across embedding rates of 40–100%. Detection is strongest on heavily
+     modified images; lightly hidden data is deliberately harder to catch.</p>
+  {% endif %}
+</div>
+
+{% if result %}
+<div class="card verdict-{{ result.level }}">
+  <p class="eyebrow">Analysis result</p>
+  <h2>{{ result.verdict }}</h2>
+  <p class="sub">{{ result.detail }}</p>
+
+  <div class="gauge">
+    <div class="gauge-fill" style="width:{{ result.prob }}%"></div>
+    <div class="gauge-mark" style="left:50%"></div>
+  </div>
+  <div class="gauge-labels">
+    <span>0% — clean</span>
+    <span class="gauge-score">suspicion score: {{ result.prob }}%</span>
+    <span>100% — falsified</span>
+  </div>
+
+  <div class="imgrow" style="margin-top:20px">
+    <figure><img src="{{ result.img_url }}"><figcaption>Inspected image ({{ result.w }}×{{ result.h }})</figcaption></figure>
+  </div>
+  <p class="note" style="margin-top:14px">A score above 50% means the LSB-plane
+     statistics deviate from an untouched image. To confirm, try the
+     <a href="/decode">Reveal</a> page — if it was made by this system, the hidden
+     content will come straight back out.</p>
+</div>
+{% endif %}
+
+<style>
+  .gauge { position:relative; height:16px; border-radius:99px; margin-top:16px;
+    background:linear-gradient(90deg,#34d399 0%,#fbbf24 50%,#f43f5e 100%);
+    box-shadow:inset 0 0 0 1px rgba(255,255,255,.12); }
+  .gauge-fill { position:absolute; top:-6px; height:28px; width:2px;
+    background:transparent; }
+  .gauge-mark { position:absolute; top:-5px; height:26px; width:2px;
+    background:rgba(255,255,255,.9); border-radius:2px;
+    box-shadow:0 0 8px rgba(255,255,255,.7); transform:translateX(-1px); }
+  .gauge .gauge-fill::after { content:''; position:absolute; right:-7px; top:-1px;
+    width:16px; height:16px; border-radius:50%; background:#fff;
+    box-shadow:0 0 0 3px rgba(0,0,0,.25), 0 0 14px rgba(255,255,255,.6); }
+  .gauge-labels { display:flex; justify-content:space-between; margin-top:12px;
+    font-size:.78rem; color:var(--faint); }
+  .gauge-score { color:var(--ink); font-weight:700; }
+  .verdict-clean  { border-color:rgba(52,211,153,.5) !important; }
+  .verdict-low    { border-color:rgba(52,211,153,.35) !important; }
+  .verdict-medium { border-color:rgba(251,191,36,.5) !important; }
+  .verdict-high   { border-color:rgba(244,63,94,.55) !important; }
+  .verdict-clean h2  { color:#34d399; }
+  .verdict-low h2    { color:#6ee7b7; }
+  .verdict-medium h2 { color:#fbbf24; }
+  .verdict-high h2   { color:#fb7185; }
+</style>
+{% endblock %}

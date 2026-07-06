@@ -1,0 +1,84 @@
+{% extends "base.html" %}{% set active='evaluate' %}
+{% block title %}Evaluation{% endblock %}
+{% block content %}
+
+{% if missing %}
+<div class="card">
+  <h2>No evaluation results yet</h2>
+  <p class="note">Run <code>python scripts/evaluate.py</code> to evaluate the
+  full dataset, then reload this page.</p>
+</div>
+{% else %}
+
+<div class="card">
+  <p class="eyebrow">Objective iii — Performance &amp; complexity</p>
+  <h2>Dataset evaluation — {{ summary.n_images }} images</h2>
+  <p class="sub">198 passport photographs + benchmark images of varying types,
+     each carrying a payload at 50% of capacity.</p>
+  <div class="metrics">
+    <div class="metric"><div class="v">{{ '%.2f' % summary.psnr_mean }} dB</div><div class="k">mean PSNR</div></div>
+    <div class="metric"><div class="v">{{ '%.2f' % summary.psnr_min }} dB</div><div class="k">min PSNR</div></div>
+    <div class="metric"><div class="v">{{ '%.1f' % summary.pct_above_40db }}%</div><div class="k">above 40 dB target</div></div>
+    <div class="metric"><div class="v">{{ '%.4f' % summary.mse_mean }}</div><div class="k">mean MSE</div></div>
+    <div class="metric"><div class="v">{{ '%.1f' % summary.extraction_accuracy_mean }}%</div><div class="k">extraction accuracy</div></div>
+    <div class="metric"><div class="v">{{ '%.1f' % summary.embed_ms_mean }} ms</div><div class="k">mean embed time</div></div>
+  </div>
+
+  {% if summary.steganalysis %}
+  <h3>ML steganalysis — trained attacker</h3>
+  <p class="note">An SVM classifier trained to detect hidden data.
+     Accuracy near 50% means stego images are statistically invisible.</p>
+  <div class="metrics">
+    <div class="metric"><div class="v">{{ '%.1f' % (summary.steganalysis.detectability_ours*100) }}%</div>
+      <div class="k">ours — 2's complement + ML</div></div>
+    <div class="metric"><div class="v">{{ '%.1f' % (summary.steganalysis.detectability_lsb*100) }}%</div>
+      <div class="k">traditional sequential LSB</div></div>
+  </div>
+  {% endif %}
+</div>
+
+{% if summary.image_in_image_demo %}
+<div class="card">
+  <p class="eyebrow grad-teal">Demonstration</p>
+  <h2>Image hidden inside an image</h2>
+  <p class="sub">Secret <code>{{ summary.image_in_image_demo.secret }}</code> hidden inside
+     <code>{{ summary.image_in_image_demo.cover }}</code> —
+     PSNR {{ '%.2f' % summary.image_in_image_demo.psnr }} dB,
+     recovered bit-perfect: <b>{{ summary.image_in_image_demo.secret_recovered_identical }}</b></p>
+  <div class="imgrow">
+    <figure><img src="/static/demo_cover.png"><figcaption>Cover</figcaption></figure>
+    <figure><img src="/static/demo_stego.png"><figcaption>Stego — secret inside</figcaption></figure>
+    <figure><img src="/static/demo_secret.png"><figcaption>Secret</figcaption></figure>
+    <figure><img src="/static/demo_recovered.png"><figcaption>Recovered secret</figcaption></figure>
+  </div>
+</div>
+{% endif %}
+
+<div class="card charts">
+  <p class="eyebrow grad-amber">Charts</p>
+  <h2>Visual results</h2>
+  <img src="/static/chart_psnr_hist.png" alt="PSNR histogram">
+  <img src="/static/chart_psnr_by_type.png" alt="PSNR by image type">
+  <img src="/static/chart_ours_vs_lsb.png" alt="Ours vs LSB">
+</div>
+
+<div class="card">
+  <p class="eyebrow grad-pink">Detail</p>
+  <h2>Per-image results <span class="note">(first 30 of {{ total }})</span></h2>
+  <div class="tablewrap" style="margin-top:12px">
+  <table>
+    <tr><th>file</th><th>type</th><th>size</th><th>payload</th>
+        <th>PSNR (ours)</th><th>PSNR (LSB)</th><th>MSE</th><th>accuracy</th></tr>
+    {% for r in rows %}
+    <tr>
+      <td>{{ r.file }}</td><td>{{ r.type }}</td><td>{{ r.w }}×{{ r.h }}</td>
+      <td>{{ r.payload_bytes }} B</td>
+      <td>{{ '%.2f' % r.psnr }}</td><td>{{ '%.2f' % r.psnr_lsb }}</td>
+      <td>{{ '%.4f' % r.mse }}</td><td>{{ '%.1f' % r.extraction_accuracy }}%</td>
+    </tr>
+    {% endfor %}
+  </table>
+  </div>
+</div>
+{% endif %}
+{% endblock %}

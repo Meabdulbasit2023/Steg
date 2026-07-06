@@ -1,0 +1,118 @@
+{% extends "base.html" %}{% set active='home' %}
+{% block title %}Home{% endblock %}
+
+{% block hero %}
+<div class="hero">
+  <canvas id="binrain"></canvas>
+  <div class="hero-inner">
+    <h1>Hide data in plain sight — provably invisible.</h1>
+    <p>An enhanced image-steganography engine that converts your secret to binary,
+       transforms it with two's complement, XORs it against the cover, and embeds it
+       into regions chosen by machine learning. Verified undetectable by a trained
+       SVM attacker.</p>
+    <div class="badges" style="margin-bottom:26px">
+      <span class="badge">Two's complement + XOR</span>
+      <span class="badge">Random Forest regions</span>
+      <span class="badge">SVM steganalysis</span>
+      <span class="badge">Image-in-image</span>
+    </div>
+    <div>
+      <a href="/encode" class="btn" style="margin-top:0">Hide a secret →</a>
+      <a href="/evaluate" class="btn" style="margin-top:0; margin-left:10px;
+         background:rgba(255,255,255,.06); border:1px solid var(--line-strong);
+         box-shadow:none;">View evaluation</a>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block content %}
+
+{% if summary %}
+<div class="card">
+  <p class="eyebrow">Proven on {{ summary.n_images }} images</p>
+  <h2>Results at a glance</h2>
+  <p class="sub">Measured across 198 passport photographs plus varied benchmark
+     image types, each carrying a payload at half of capacity.</p>
+  <div class="metrics">
+    <div class="metric"><div class="v">{{ '%.1f' % summary.psnr_mean }} dB</div><div class="k">mean PSNR</div></div>
+    <div class="metric"><div class="v">{{ '%.0f' % summary.pct_above_40db }}%</div><div class="k">above 40 dB target</div></div>
+    <div class="metric"><div class="v">{{ '%.0f' % summary.extraction_accuracy_mean }}%</div><div class="k">message recovery</div></div>
+    {% if summary.steganalysis %}
+    <div class="metric"><div class="v">{{ '%.0f' % (summary.steganalysis.detectability_ours*100) }}%</div><div class="k">detectability (50% = invisible)</div></div>
+    {% endif %}
+    <div class="metric"><div class="v">{{ '%.0f' % summary.mse_mean if summary.mse_mean >= 1 else '%.2f' % summary.mse_mean }}</div><div class="k">mean MSE</div></div>
+  </div>
+</div>
+{% endif %}
+
+<div class="card">
+  <p class="eyebrow grad-teal">The pipeline</p>
+  <h2>How a secret becomes invisible</h2>
+  <div class="grid2" style="margin-top:18px">
+    <div>
+      <h3 style="margin-top:0">1 · Binary → two's complement</h3>
+      <p class="sub">Every byte of the secret is converted to binary, then transformed
+         with <code>S₂comp = NOT(S) + 1</code> — a reversible scramble that hides the
+         original values.</p>
+      <h3>2 · XOR against the cover</h3>
+      <p class="sub">Each bit is XORed with the pixel it will occupy, tying the payload
+         to the specific image so a raw read reveals nothing.</p>
+    </div>
+    <div>
+      <h3 style="margin-top:0">3 · Machine-learning placement</h3>
+      <p class="sub">A Random Forest ranks every 8×8 block by texture and hides bits in
+         the busiest areas first, where the human eye can't see the change.</p>
+      <h3>4 · Verify & measure</h3>
+      <p class="sub">An SVM attacker tries to detect the result; PSNR and MSE confirm
+         quality. The secret is recovered bit-for-bit.</p>
+    </div>
+  </div>
+</div>
+
+<div class="card">
+  <p class="eyebrow grad-amber">Explore</p>
+  <h2>What you can do here</h2>
+  <div class="grid2" style="margin-top:16px; gap:16px">
+    <a href="/encode" class="feature-link">
+      <b>Hide a secret →</b><span>Embed an image or message into a cover, with a live
+      two's-complement calculation trace.</span></a>
+    <a href="/decode" class="feature-link">
+      <b>Reveal a secret →</b><span>Recover the hidden image or text from a stego PNG.</span></a>
+    <a href="/detect" class="feature-link">
+      <b>Detect falsified images →</b><span>The SVM steganalysis model flags images that contain hidden data.</span></a>
+    <a href="/compare" class="feature-link">
+      <b>Compare methods →</b><span>Our method side-by-side with traditional LSB and DCT.</span></a>
+    <a href="/robustness" class="feature-link">
+      <b>Robustness test →</b><span>Recovery under compression, cropping and resizing.</span></a>
+    <a href="/evaluate" class="feature-link">
+      <b>Evaluation dashboard →</b><span>Full PSNR / MSE / accuracy results with charts.</span></a>
+    <a href="/about" class="feature-link">
+      <b>How it works →</b><span>The algorithm, the two ML models, and the metrics.</span></a>
+  </div>
+</div>
+
+<div class="card">
+  <p class="eyebrow grad-pink">Project aim &amp; objectives</p>
+  <h2>What this system sets out to do</h2>
+  <p class="sub"><strong>Aim:</strong> design an enhanced image-steganography framework
+     that uses two's complement and machine learning for image hiding.</p>
+  <ol>
+    <li><strong>Design</strong> the two's complement steganography framework.</li>
+    <li><strong>Implement</strong> it (this web application, built in Python).</li>
+    <li><strong>Evaluate</strong> performance with PSNR and MSE, and compare with
+        traditional techniques (LSB, DCT).</li>
+    <li><strong>Deploy</strong> and recommend the best method by performance and accuracy.</li>
+  </ol>
+</div>
+
+<style>
+  .feature-link { display:block; padding:18px 20px; border:1px solid var(--line);
+    border-radius:14px; background:rgba(255,255,255,.03); text-decoration:none;
+    transition:.2s; }
+  .feature-link:hover { border-color:rgba(91,124,250,.45); transform:translateY(-2px);
+    background:rgba(91,124,250,.08); }
+  .feature-link b { display:block; color:#c3d0ff; font-size:1rem; margin-bottom:5px; }
+  .feature-link span { color:var(--muted); font-size:.9rem; }
+</style>
+{% endblock %}

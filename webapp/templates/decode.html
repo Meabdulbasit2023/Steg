@@ -1,0 +1,42 @@
+{% extends "base.html" %}{% set active='decode' %}
+{% block title %}Reveal a secret{% endblock %}
+{% block content %}
+
+{% if error %}<div class="error">{{ error }}</div>{% endif %}
+
+<div class="card">
+  <p class="eyebrow">Step 2 — Decode</p>
+  <h2>Reveal the hidden secret</h2>
+  <p class="sub">Upload a stego PNG produced by this system. The decoder re-derives
+     the same ML-chosen regions, reverses the XOR, then reverses the two's
+     complement to reconstruct the secret bit-for-bit.</p>
+  <form method="post" enctype="multipart/form-data">
+    <label>Stego image</label>
+    <input type="file" name="stego" accept="image/*" required>
+    <button class="btn" type="submit">Extract secret</button>
+  </form>
+</div>
+
+{% if result %}
+<div class="card">
+  <p class="eyebrow">Result</p>
+  <h2>Secret recovered <span class="pill">100% extraction</span></h2>
+  {% if result.kind == 'image' %}
+    <div class="metrics">
+      <div class="metric"><div class="v">{{ result.size }}</div><div class="k">secret size</div></div>
+      <div class="metric"><div class="v">{{ result.bytes }}</div><div class="k">bytes recovered</div></div>
+    </div>
+    <div class="imgrow">
+      <figure><img src="{{ result.url }}"><figcaption>Recovered secret image</figcaption></figure>
+    </div>
+    <a href="{{ result.url }}" download><button class="btn" type="button" style="margin-top:22px">Download recovered image</button></a>
+  {% else %}
+    <div class="metrics">
+      <div class="metric"><div class="v">{{ result.bytes }}</div><div class="k">bytes recovered</div></div>
+    </div>
+    <label>Recovered message</label>
+    <textarea readonly>{{ result.text }}</textarea>
+  {% endif %}
+</div>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,8 @@
+{
+  "classifier": "SVM (RBF kernel)",
+  "region_model": "Random Forest",
+  "detection_accuracy": 0.7043889845094665,
+  "detectability_ours": 0.5841078600114745,
+  "detectability_lsb": 0.6515490533562822,
+  "n_samples": 416
+}

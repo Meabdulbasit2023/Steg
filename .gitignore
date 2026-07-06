@@ -1,0 +1,19 @@
+# Python
+venv/
+__pycache__/
+*.pyc
+*.pyo
+.Python
+
+# OS
+.DS_Store
+
+# Private dataset — real students' passport photos (excluded for privacy)
+PICS/
+PICS-1.rar
+
+# Per-session generated stego/decoded images from using the web app
+webapp/static/out/
+
+# Local editor/harness config
+.claude/
