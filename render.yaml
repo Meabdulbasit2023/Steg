@@ -1,0 +1,16 @@
+# Render Blueprint — deploys the Flask web app as a persistent web service.
+# In the Render dashboard: New +  ->  Blueprint  ->  connect the Steg repo.
+services:
+  - type: web
+    name: stegovault
+    runtime: python
+    plan: free
+    branch: main
+    buildCommand: pip install -r requirements.txt
+    # 1 worker keeps memory within the 512 MB free tier (OpenCV + scikit-learn
+    # load once); 120s timeout covers the heavier image operations.
+    startCommand: gunicorn --chdir webapp app:app --bind 0.0.0.0:$PORT --workers 1 --threads 2 --timeout 120
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: "3.12.7"
